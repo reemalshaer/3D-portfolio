@@ -1,0 +1,25 @@
+{
+  "name": "3d-portfolio",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:16394/git/reemalshaer/3D-portfolio"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.180.0",
+    "vite": "^7.1.12"
+  },
+  "devDependencies": {
+    "@types/three": "^0.180.0"
+  }
+}

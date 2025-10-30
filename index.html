@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Portfolio - Interactive Desk Setup</title>
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+  <div id="app">
+    <canvas id="webgl"></canvas>
+
+    <!-- UI Overlay -->
+    <div id="ui-overlay" class="hidden">
+      <div class="ui-container">
+        <h1>Welcome to My Portfolio</h1>
+        <div class="button-grid">
+          <button class="ui-button" data-section="about">About Me</button>
+          <button class="ui-button" data-section="projects">Projects</button>
+          <button class="ui-button" data-section="skills">Skills</button>
+          <button class="ui-button" data-section="contact">Contact</button>
+        </div>
+        <button id="back-button" class="back-button">← Back to Desk</button>
+      </div>
+
+      <!-- Content Sections -->
+      <div id="content-display" class="content-display hidden">
+        <div class="content-container">
+          <button class="close-content">✕</button>
+          <div id="content-area"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Instructions -->
+    <div id="instructions" class="instructions">
+      <p>Click on the desk setup to interact</p>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
