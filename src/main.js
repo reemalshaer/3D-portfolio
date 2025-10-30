@@ -3,7 +3,8 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 // Scene setup
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1a1a2e);
+scene.background = new THREE.Color(0x0a0a2e); // Dark blue background
+scene.fog = new THREE.Fog(0x0a0a2e, 10, 30);
 
 // Camera
 const camera = new THREE.PerspectiveCamera(
@@ -35,27 +36,36 @@ controls.minDistance = 3;
 controls.maxDistance = 20;
 
 // Lighting
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+const ambientLight = new THREE.AmbientLight(0x4a5a8a, 0.3);
 scene.add(ambientLight);
 
-const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
-mainLight.position.set(5, 10, 5);
-mainLight.castShadow = true;
-mainLight.shadow.mapSize.width = 2048;
-mainLight.shadow.mapSize.height = 2048;
-mainLight.shadow.camera.far = 50;
-mainLight.shadow.camera.left = -10;
-mainLight.shadow.camera.right = 10;
-mainLight.shadow.camera.top = 10;
-mainLight.shadow.camera.bottom = -10;
-scene.add(mainLight);
+// Spotlight on the desk - bright center
+const spotLight = new THREE.SpotLight(0xffffff, 3);
+spotLight.position.set(0, 8, 0);
+spotLight.angle = Math.PI / 6;
+spotLight.penumbra = 0.5;
+spotLight.decay = 2;
+spotLight.distance = 20;
+spotLight.castShadow = true;
+spotLight.shadow.mapSize.width = 2048;
+spotLight.shadow.mapSize.height = 2048;
+scene.add(spotLight);
+spotLight.target.position.set(0, 0, 0);
+scene.add(spotLight.target);
+
+// Flashing effect on load
+let flashTime = 0;
+let isFlashing = true;
+setTimeout(() => {
+  isFlashing = false;
+}, 3000); // Flash for 3 seconds
 
 // Floor
 const floorGeometry = new THREE.PlaneGeometry(20, 20);
 const floorMaterial = new THREE.MeshStandardMaterial({
-  color: 0x2c2c3e,
-  roughness: 0.8,
-  metalness: 0.2
+  color: 0x1a1a3e,
+  roughness: 0.9,
+  metalness: 0.1
 });
 const floor = new THREE.Mesh(floorGeometry, floorMaterial);
 floor.rotation.x = -Math.PI / 2;
@@ -66,10 +76,10 @@ scene.add(floor);
 // Desk Group
 const deskGroup = new THREE.Group();
 
-// Desk surface
-const deskTopGeometry = new THREE.BoxGeometry(4, 0.1, 2.5);
+// Desk surface (cartoon style - rounded edges)
+const deskTopGeometry = new THREE.BoxGeometry(4, 0.15, 2.5);
 const deskMaterial = new THREE.MeshStandardMaterial({
-  color: 0x8b6f47,
+  color: 0xa67c52,
   roughness: 0.6,
   metalness: 0.1
 });
@@ -79,13 +89,13 @@ deskTop.castShadow = true;
 deskTop.receiveShadow = true;
 deskGroup.add(deskTop);
 
-// Desk legs
-const legGeometry = new THREE.BoxGeometry(0.1, 1, 0.1);
+// Desk legs (cartoon style)
+const legGeometry = new THREE.CylinderGeometry(0.06, 0.08, 1, 12);
 const legPositions = [
-  [-1.8, -0.5, 1.1],
-  [1.8, -0.5, 1.1],
-  [-1.8, -0.5, -1.1],
-  [1.8, -0.5, -1.1]
+  [-1.7, -0.5, 1.0],
+  [1.7, -0.5, 1.0],
+  [-1.7, -0.5, -1.0],
+  [1.7, -0.5, -1.0]
 ];
 
 legPositions.forEach(pos => {
@@ -103,7 +113,7 @@ const laptopGroup = new THREE.Group();
 // Laptop base
 const laptopBaseGeometry = new THREE.BoxGeometry(1.5, 0.05, 1);
 const laptopMaterial = new THREE.MeshStandardMaterial({
-  color: 0x2c2c3c,
+  color: 0x3a3a4a,
   roughness: 0.4,
   metalness: 0.6
 });
@@ -112,21 +122,187 @@ laptopBase.position.set(0, 0.075, 0.2);
 laptopBase.castShadow = true;
 laptopGroup.add(laptopBase);
 
-// Laptop keyboard
+// Laptop keyboard area
 const keyboardGeometry = new THREE.BoxGeometry(1.3, 0.02, 0.8);
 const keyboardMaterial = new THREE.MeshStandardMaterial({
-  color: 0x1a1a2e,
+  color: 0x2a2a3a,
   roughness: 0.7
 });
 const keyboard = new THREE.Mesh(keyboardGeometry, keyboardMaterial);
 keyboard.position.set(0, 0.085, 0.15);
 laptopGroup.add(keyboard);
 
+// Create canvas texture for screen with menu
+const screenCanvas = document.createElement('canvas');
+screenCanvas.width = 1024;
+screenCanvas.height = 768;
+const screenCtx = screenCanvas.getContext('2d');
+
+// Menu state
+let currentMenu = 'main';
+let selectedOption = 0;
+
+function drawScreenContent() {
+  // Clear screen with dark background
+  screenCtx.fillStyle = '#0a0a1a';
+  screenCtx.fillRect(0, 0, screenCanvas.width, screenCanvas.height);
+
+  // Add scanline effect
+  for (let i = 0; i < screenCanvas.height; i += 4) {
+    screenCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+    screenCtx.fillRect(0, i, screenCanvas.width, 2);
+  }
+
+  if (currentMenu === 'main') {
+    // Draw menu title
+    screenCtx.font = 'bold 60px "Courier New", Consolas, Monaco, monospace';
+    screenCtx.fillStyle = '#00ff88';
+    screenCtx.textAlign = 'center';
+    screenCtx.fillText('PORTFOLIO_TERMINAL', screenCanvas.width / 2, 120);
+
+    // Draw cursor line
+    screenCtx.font = '40px "Courier New", Consolas, Monaco, monospace';
+    screenCtx.fillStyle = '#00ff88';
+    screenCtx.fillText('> SELECT_OPTION:', screenCanvas.width / 2, 200);
+
+    // Menu options
+    const options = [
+      '[ 1 ] ABOUT_ME',
+      '[ 2 ] PROJECTS',
+      '[ 3 ] SKILLS',
+      '[ 4 ] CONTACT'
+    ];
+
+    options.forEach((option, index) => {
+      const y = 280 + index * 80;
+      const isSelected = index === selectedOption;
+
+      screenCtx.font = `${isSelected ? 'bold ' : ''}45px "Courier New", Consolas, Monaco, monospace`;
+      screenCtx.fillStyle = isSelected ? '#ffff00' : '#00cc88';
+
+      if (isSelected) {
+        screenCtx.fillStyle = '#ffff00';
+        screenCtx.fillText('>', 200, y);
+      }
+
+      screenCtx.fillStyle = isSelected ? '#ffff00' : '#00cc88';
+      screenCtx.fillText(option, screenCanvas.width / 2, y);
+    });
+
+    // Instructions
+    screenCtx.font = '30px "Courier New", Consolas, Monaco, monospace';
+    screenCtx.fillStyle = '#5588ff';
+    screenCtx.fillText('[ CLICK TO SELECT ]', screenCanvas.width / 2, 620);
+    screenCtx.fillText('[ ESC TO EXIT ]', screenCanvas.width / 2, 670);
+  } else {
+    // Content screen
+    const contentData = {
+      about: {
+        title: 'ABOUT_ME.TXT',
+        lines: [
+          'Hello! I\'m a passionate developer',
+          'specializing in:',
+          '',
+          '• Interactive 3D experiences',
+          '• WebGL and Three.js',
+          '• Modern web technologies',
+          '• Creative coding',
+          '',
+          'Building the future of the web,',
+          'one pixel at a time.'
+        ]
+      },
+      projects: {
+        title: 'PROJECTS.TXT',
+        lines: [
+          'FEATURED PROJECTS:',
+          '',
+          '1. Interactive 3D Portfolio',
+          '   Tech: Three.js, Vite',
+          '',
+          '2. WebGL Shader Art',
+          '   Tech: GLSL, Canvas',
+          '',
+          '3. 3D Product Visualizer',
+          '   Tech: Three.js, React',
+          '',
+          '4. Virtual Gallery',
+          '   Tech: WebXR, Three.js'
+        ]
+      },
+      skills: {
+        title: 'SKILLS.TXT',
+        lines: [
+          'TECHNICAL SKILLS:',
+          '',
+          '3D Graphics:',
+          '  Three.js, WebGL, GLSL',
+          '',
+          'Frontend:',
+          '  JavaScript, React, Vue',
+          '  HTML5, CSS3',
+          '',
+          'Tools:',
+          '  Vite, Git, Blender',
+          '  Node.js, Express'
+        ]
+      },
+      contact: {
+        title: 'CONTACT.TXT',
+        lines: [
+          'GET IN TOUCH:',
+          '',
+          'Email:',
+          '  your.email@example.com',
+          '',
+          'GitHub:',
+          '  github.com/yourusername',
+          '',
+          'LinkedIn:',
+          '  linkedin.com/in/yourprofile',
+          '',
+          'Let\'s build something amazing!'
+        ]
+      }
+    };
+
+    const content = contentData[currentMenu];
+
+    // Draw title
+    screenCtx.font = 'bold 50px "Courier New", Consolas, Monaco, monospace';
+    screenCtx.fillStyle = '#00ff88';
+    screenCtx.textAlign = 'center';
+    screenCtx.fillText(content.title, screenCanvas.width / 2, 80);
+
+    // Draw border
+    screenCtx.strokeStyle = '#00ff88';
+    screenCtx.lineWidth = 3;
+    screenCtx.strokeRect(50, 110, screenCanvas.width - 100, screenCanvas.height - 200);
+
+    // Draw content
+    screenCtx.font = '32px "Courier New", Consolas, Monaco, monospace';
+    screenCtx.fillStyle = '#00cc88';
+    screenCtx.textAlign = 'left';
+
+    content.lines.forEach((line, index) => {
+      screenCtx.fillText(line, 80, 160 + index * 42);
+    });
+
+    // Back button
+    screenCtx.font = 'bold 32px "Courier New", Consolas, Monaco, monospace';
+    screenCtx.fillStyle = '#ffff00';
+    screenCtx.textAlign = 'center';
+    screenCtx.fillText('[ PRESS ESC TO GO BACK ]', screenCanvas.width / 2, 700);
+  }
+
+  screenTexture.needsUpdate = true;
+}
+
 // Laptop screen
 const screenGroup = new THREE.Group();
 const screenGeometry = new THREE.BoxGeometry(1.5, 0.9, 0.05);
 const screenMaterial = new THREE.MeshStandardMaterial({
-  color: 0x1a1a1a,
+  color: 0x2a2a2a,
   roughness: 0.3,
   metalness: 0.7
 });
@@ -134,16 +310,23 @@ const screenBody = new THREE.Mesh(screenGeometry, screenMaterial);
 screenBody.castShadow = true;
 screenGroup.add(screenBody);
 
-// Laptop display
+// Laptop display with canvas texture
+const screenTexture = new THREE.CanvasTexture(screenCanvas);
 const displayGeometry = new THREE.PlaneGeometry(1.4, 0.8);
 const displayMaterial = new THREE.MeshStandardMaterial({
-  color: 0x4a90e2,
-  emissive: 0x2a5a8a,
-  emissiveIntensity: 0.5
+  map: screenTexture,
+  emissive: 0x1a3a5a,
+  emissiveIntensity: 0.8
 });
 const display = new THREE.Mesh(displayGeometry, displayMaterial);
 display.position.z = 0.026;
+display.name = 'screen';
 screenGroup.add(display);
+
+// Screen light
+const screenLight = new THREE.PointLight(0x4a90e2, 2, 3);
+screenLight.position.set(0, 0, 0.5);
+screenGroup.add(screenLight);
 
 screenGroup.position.set(0, 0.55, -0.25);
 screenGroup.rotation.x = -Math.PI / 2.5;
@@ -152,41 +335,115 @@ laptopGroup.add(screenGroup);
 laptopGroup.position.y = 0.05;
 deskGroup.add(laptopGroup);
 
-// Desk Lamp
+// Coffee cup (cartoon style)
+const cupGroup = new THREE.Group();
+const cupGeometry = new THREE.CylinderGeometry(0.08, 0.06, 0.15, 16);
+const cupMaterial = new THREE.MeshStandardMaterial({
+  color: 0xff6b6b,
+  roughness: 0.4
+});
+const cup = new THREE.Mesh(cupGeometry, cupMaterial);
+cup.position.y = 0.15;
+cup.castShadow = true;
+cupGroup.add(cup);
+
+// Coffee liquid
+const coffeeGeometry = new THREE.CylinderGeometry(0.075, 0.06, 0.13, 16);
+const coffeeMaterial = new THREE.MeshStandardMaterial({
+  color: 0x3e2723,
+  roughness: 0.8
+});
+const coffee = new THREE.Mesh(coffeeGeometry, coffeeMaterial);
+coffee.position.y = 0.15;
+cupGroup.add(coffee);
+
+// Handle
+const handleGeometry = new THREE.TorusGeometry(0.05, 0.015, 8, 16, Math.PI);
+const handle = new THREE.Mesh(handleGeometry, cupMaterial);
+handle.rotation.z = Math.PI / 2;
+handle.position.set(0.08, 0.15, 0);
+cupGroup.add(handle);
+
+cupGroup.position.set(-1.2, 0.075, 0.6);
+deskGroup.add(cupGroup);
+
+// Small plant (cartoon style)
+const plantGroup = new THREE.Group();
+const potGeometry = new THREE.CylinderGeometry(0.1, 0.08, 0.12, 16);
+const potMaterial = new THREE.MeshStandardMaterial({
+  color: 0xd4a574,
+  roughness: 0.7
+});
+const pot = new THREE.Mesh(potGeometry, potMaterial);
+pot.position.y = 0.13;
+pot.castShadow = true;
+plantGroup.add(pot);
+
+// Leaves
+const leafMaterial = new THREE.MeshStandardMaterial({
+  color: 0x4caf50,
+  roughness: 0.8
+});
+for (let i = 0; i < 5; i++) {
+  const leafGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+  const leaf = new THREE.Mesh(leafGeometry, leafMaterial);
+  const angle = (i / 5) * Math.PI * 2;
+  leaf.position.set(
+    Math.cos(angle) * 0.06,
+    0.22 + Math.random() * 0.05,
+    Math.sin(angle) * 0.06
+  );
+  leaf.scale.y = 1.5;
+  plantGroup.add(leaf);
+}
+
+plantGroup.position.set(1.5, 0.075, -0.8);
+deskGroup.add(plantGroup);
+
+// Desk Lamp (cartoon style)
 const lampGroup = new THREE.Group();
 
 // Lamp base
-const lampBaseGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.05, 16);
+const lampBaseGeometry = new THREE.CylinderGeometry(0.15, 0.18, 0.06, 16);
 const lampMaterial = new THREE.MeshStandardMaterial({
-  color: 0x333333,
-  roughness: 0.5,
-  metalness: 0.7
+  color: 0xffd700,
+  roughness: 0.4,
+  metalness: 0.6
 });
 const lampBase = new THREE.Mesh(lampBaseGeometry, lampMaterial);
-lampBase.position.y = 0.075;
+lampBase.position.y = 0.08;
+lampBase.castShadow = true;
 lampGroup.add(lampBase);
 
 // Lamp arm
-const lampArmGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.8, 8);
+const lampArmGeometry = new THREE.CylinderGeometry(0.035, 0.035, 0.8, 8);
 const lampArm = new THREE.Mesh(lampArmGeometry, lampMaterial);
 lampArm.position.set(0, 0.45, 0);
-lampArm.rotation.z = Math.PI / 6;
+lampArm.rotation.z = Math.PI / 5;
 lampGroup.add(lampArm);
 
 // Lamp head
-const lampHeadGeometry = new THREE.ConeGeometry(0.15, 0.25, 16);
-const lampHead = new THREE.Mesh(lampHeadGeometry, lampMaterial);
-lampHead.position.set(0.3, 0.8, 0);
-lampHead.rotation.z = Math.PI / 4;
+const lampHeadGeometry = new THREE.ConeGeometry(0.18, 0.3, 16);
+const lampHeadMaterial = new THREE.MeshStandardMaterial({
+  color: 0xffd700,
+  emissive: 0xffaa00,
+  emissiveIntensity: 0.3,
+  roughness: 0.4,
+  metalness: 0.6
+});
+const lampHead = new THREE.Mesh(lampHeadGeometry, lampHeadMaterial);
+lampHead.position.set(0.35, 0.85, 0);
+lampHead.rotation.z = Math.PI / 3.5;
+lampHead.castShadow = true;
 lampGroup.add(lampHead);
 
 // Lamp light
-const lampLight = new THREE.PointLight(0xffd699, 1.5, 5);
-lampLight.position.set(0.35, 0.7, 0);
+const lampLight = new THREE.PointLight(0xffd699, 2, 5);
+lampLight.position.set(0.45, 0.75, 0);
 lampLight.castShadow = true;
 lampGroup.add(lampLight);
 
-lampGroup.position.set(1.3, 0.05, 0.5);
+lampGroup.position.set(-1.3, 0.05, -0.5);
 deskGroup.add(lampGroup);
 
 // Raycaster for click detection
@@ -197,65 +454,15 @@ const mouse = new THREE.Vector2();
 let isZoomedIn = false;
 let isAnimating = false;
 const originalCameraPosition = new THREE.Vector3(0, 5, 10);
-const zoomedCameraPosition = new THREE.Vector3(0, 1.5, 2.5);
+const zoomedCameraPosition = new THREE.Vector3(0, 0.8, 1.2); // Closer to screen
 const originalControlsTarget = new THREE.Vector3(0, 0, 0);
-const zoomedControlsTarget = new THREE.Vector3(0, 0.5, 0);
+const zoomedControlsTarget = new THREE.Vector3(0, 0.5, -0.2); // Looking at screen
 
 // UI Elements
-const uiOverlay = document.getElementById('ui-overlay');
 const instructions = document.getElementById('instructions');
-const backButton = document.getElementById('back-button');
-const contentDisplay = document.getElementById('content-display');
-const contentArea = document.getElementById('content-area');
-const uiButtons = document.querySelectorAll('.ui-button');
-const closeContentButton = document.querySelector('.close-content');
 
-// Content data
-const contentData = {
-  about: {
-    title: 'About Me',
-    content: `
-      <h2>About Me</h2>
-      <p>Hello! I'm a passionate developer who loves creating interactive 3D experiences on the web.</p>
-      <p>I specialize in Three.js, WebGL, and modern web technologies to bring creative visions to life.</p>
-      <p>This portfolio showcases my skills in 3D web development and interactive design.</p>
-    `
-  },
-  projects: {
-    title: 'Projects',
-    content: `
-      <h2>My Projects</h2>
-      <ul>
-        <li><strong>Interactive 3D Portfolio</strong> - This very project! Built with Three.js and Vite.</li>
-        <li><strong>WebGL Shader Art</strong> - Creative experiments with GLSL shaders.</li>
-        <li><strong>3D Product Visualizer</strong> - E-commerce 3D product viewer.</li>
-        <li><strong>Virtual Gallery</strong> - Immersive art gallery experience.</li>
-      </ul>
-    `
-  },
-  skills: {
-    title: 'Skills',
-    content: `
-      <h2>Technical Skills</h2>
-      <ul>
-        <li><strong>3D Graphics:</strong> Three.js, WebGL, GLSL Shaders</li>
-        <li><strong>Frontend:</strong> JavaScript, React, Vue, HTML5, CSS3</li>
-        <li><strong>Tools:</strong> Vite, Webpack, Git, Blender</li>
-        <li><strong>Other:</strong> Node.js, Express, MongoDB</li>
-      </ul>
-    `
-  },
-  contact: {
-    title: 'Contact',
-    content: `
-      <h2>Get In Touch</h2>
-      <p>I'd love to hear from you! Feel free to reach out for collaborations or opportunities.</p>
-      <p><strong>Email:</strong> your.email@example.com</p>
-      <p><strong>GitHub:</strong> github.com/yourusername</p>
-      <p><strong>LinkedIn:</strong> linkedin.com/in/yourprofile</p>
-    `
-  }
-};
+// Initialize screen
+drawScreenContent();
 
 // Animate camera
 function animateCamera(targetPosition, targetLookAt, duration = 1500) {
@@ -301,11 +508,6 @@ function zoomIn() {
   instructions.style.display = 'none';
 
   animateCamera(zoomedCameraPosition, zoomedControlsTarget);
-
-  setTimeout(() => {
-    uiOverlay.classList.remove('hidden');
-    uiOverlay.classList.add('show');
-  }, 800);
 }
 
 // Zoom out
@@ -313,32 +515,15 @@ function zoomOut() {
   if (!isZoomedIn || isAnimating) return;
 
   isZoomedIn = false;
-  uiOverlay.classList.remove('show');
-  uiOverlay.classList.add('hidden');
-  contentDisplay.classList.remove('show');
-  contentDisplay.classList.add('hidden');
+  currentMenu = 'main';
+  selectedOption = 0;
+  drawScreenContent();
 
   animateCamera(originalCameraPosition, originalControlsTarget);
 
   setTimeout(() => {
     instructions.style.display = 'block';
   }, 1000);
-}
-
-// Show content
-function showContent(section) {
-  const data = contentData[section];
-  if (!data) return;
-
-  contentArea.innerHTML = data.content;
-  contentDisplay.classList.remove('hidden');
-  contentDisplay.classList.add('show');
-}
-
-// Hide content
-function hideContent() {
-  contentDisplay.classList.remove('show');
-  contentDisplay.classList.add('hidden');
 }
 
 // Click handler
@@ -350,26 +535,83 @@ canvas.addEventListener('click', (event) => {
 
   raycaster.setFromCamera(mouse, camera);
 
-  const intersects = raycaster.intersectObject(deskGroup, true);
-
-  if (intersects.length > 0 && !isZoomedIn) {
-    zoomIn();
+  if (!isZoomedIn) {
+    // Check if clicked on desk
+    const intersects = raycaster.intersectObject(deskGroup, true);
+    if (intersects.length > 0) {
+      zoomIn();
+    }
+  } else {
+    // Check if clicked on screen
+    const screenIntersects = raycaster.intersectObject(display, false);
+    if (screenIntersects.length > 0) {
+      if (currentMenu === 'main') {
+        // Select the highlighted option
+        const options = ['about', 'projects', 'skills', 'contact'];
+        currentMenu = options[selectedOption];
+        drawScreenContent();
+      }
+    }
   }
 });
 
-// Back button
-backButton.addEventListener('click', zoomOut);
+// Mouse move to highlight options
+canvas.addEventListener('mousemove', (event) => {
+  if (!isZoomedIn || currentMenu !== 'main') return;
 
-// UI buttons
-uiButtons.forEach(button => {
-  button.addEventListener('click', () => {
-    const section = button.getAttribute('data-section');
-    showContent(section);
-  });
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const screenIntersects = raycaster.intersectObject(display, false);
+
+  if (screenIntersects.length > 0) {
+    const uv = screenIntersects[0].uv;
+    const y = uv.y;
+
+    // Map UV to menu options
+    if (y > 0.35 && y < 0.75) {
+      const newSelected = Math.floor((y - 0.35) / 0.1);
+      if (newSelected >= 0 && newSelected < 4 && newSelected !== selectedOption) {
+        selectedOption = newSelected;
+        drawScreenContent();
+      }
+    }
+  }
 });
 
-// Close content button
-closeContentButton.addEventListener('click', hideContent);
+// Keyboard controls
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && isZoomedIn) {
+    if (currentMenu !== 'main') {
+      currentMenu = 'main';
+      drawScreenContent();
+    } else {
+      zoomOut();
+    }
+  }
+
+  if (isZoomedIn && currentMenu === 'main') {
+    if (event.key === 'ArrowUp') {
+      selectedOption = (selectedOption - 1 + 4) % 4;
+      drawScreenContent();
+    } else if (event.key === 'ArrowDown') {
+      selectedOption = (selectedOption + 1) % 4;
+      drawScreenContent();
+    } else if (event.key === 'Enter') {
+      const options = ['about', 'projects', 'skills', 'contact'];
+      currentMenu = options[selectedOption];
+      drawScreenContent();
+    }
+  }
+
+  // Number keys
+  if (isZoomedIn && currentMenu === 'main' && event.key >= '1' && event.key <= '4') {
+    const options = ['about', 'projects', 'skills', 'contact'];
+    currentMenu = options[parseInt(event.key) - 1];
+    drawScreenContent();
+  }
+});
 
 // Handle window resize
 window.addEventListener('resize', () => {
@@ -387,8 +629,21 @@ function animate() {
     controls.update();
   }
 
-  // Subtle lamp light pulsing
-  lampLight.intensity = 1.5 + Math.sin(Date.now() * 0.001) * 0.2;
+  flashTime += 0.016;
+
+  // Flashing lamp light on load
+  if (isFlashing) {
+    const flashIntensity = Math.abs(Math.sin(flashTime * 5)) * 1.5 + 1;
+    lampLight.intensity = flashIntensity * 2;
+    lampHeadMaterial.emissiveIntensity = flashIntensity * 0.5;
+  } else {
+    // Subtle pulsing after flash
+    lampLight.intensity = 2 + Math.sin(Date.now() * 0.001) * 0.3;
+  }
+
+  // Screen glow effect
+  displayMaterial.emissiveIntensity = 0.8 + Math.sin(Date.now() * 0.002) * 0.2;
+  screenLight.intensity = 2 + Math.sin(Date.now() * 0.003) * 0.5;
 
   renderer.render(scene, camera);
 }
